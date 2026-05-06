@@ -1,0 +1,208 @@
+import { Card, CardContent, CardHeader, CardTitle } from "../components/Card";
+import { mockOrdenes } from "../data/mockData";
+import StatusBadge from "../components/StatusBadge";
+import { AlertTriangle, CheckCircle2, Clock } from "lucide-react";
+
+const talleres = [
+  { key: "diseno", label: "Diseño" },
+  { key: "sublimacion", label: "Sublimación" },
+  { key: "corte", label: "Corte" },
+  { key: "costura", label: "Costura" },
+  { key: "bordado", label: "Bordado" },
+];
+
+export default function Seguimiento() {
+  const getEstadoIcon = (estado: string) => {
+    switch (estado) {
+      case "completed":
+        return <CheckCircle2 className="w-4 h-4 text-status-completed" />;
+      case "in-progress":
+        return <Clock className="w-4 h-4 text-status-in-progress" />;
+      default:
+        return <div className="w-4 h-4 rounded-full border-2 border-muted-foreground" />;
+    }
+  };
+
+  const getCuellosDeBotella = () => {
+    const talleresCarga: any = {};
+    talleres.forEach((taller) => {
+      talleresCarga[taller.key] = mockOrdenes.filter(
+        (o) => o.progreso[taller.key as keyof typeof o.progreso] === "in-progress"
+      ).length;
+    });
+    return talleresCarga;
+  };
+
+  const cuellosDeBotella = getCuellosDeBotella();
+  const tallerMasCargado = Object.entries(cuellosDeBotella).sort(
+    ([, a], [, b]) => (b as number) - (a as number)
+  )[0];
+
+  return (
+    <div className="p-6 space-y-6">
+      <div>
+        <h1>Seguimiento de Producción</h1>
+        <p className="text-muted-foreground mt-1">
+          Vista global del flujo de órdenes por talleres
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        {talleres.map((taller) => {
+          const enProceso = cuellosDeBotella[taller.key];
+          const esCuello = tallerMasCargado[0] === taller.key && enProceso > 2;
+          return (
+            <Card key={taller.key} className={esCuello ? "border-status-in-progress" : ""}>
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground mb-1">{taller.label}</p>
+                <p className="text-2xl font-semibold">{enProceso}</p>
+                <p className="text-xs text-muted-foreground mt-1">en proceso</p>
+                {esCuello && (
+                  <div className="mt-2 flex items-center gap-1 text-xs text-status-in-progress">
+                    <AlertTriangle className="w-3 h-3" />
+                    <span>Alta carga</span>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Flujo de Órdenes</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-secondary">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Orden
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Cliente
+                  </th>
+                  {talleres.map((taller) => (
+                    <th
+                      key={taller.key}
+                      className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider"
+                    >
+                      {taller.label}
+                    </th>
+                  ))}
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Progreso
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {mockOrdenes.map((orden) => {
+                  const talleresList = Object.values(orden.progreso);
+                  const completados = talleresList.filter((t) => t === "completed").length;
+                  const progreso = Math.round((completados / talleresList.length) * 100);
+
+                  return (
+                    <tr key={orden.id} className="hover:bg-secondary/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <p className="font-medium text-foreground">{orden.numero}</p>
+                        <p className="text-xs text-muted-foreground">{orden.producto}</p>
+                      </td>
+                      <td className="px-6 py-4 text-foreground">{orden.cliente}</td>
+                      {talleres.map((taller) => {
+                        const estado = orden.progreso[taller.key as keyof typeof orden.progreso];
+                        return (
+                          <td key={taller.key} className="px-6 py-4">
+                            <div className="flex justify-center">
+                              {getEstadoIcon(estado)}
+                            </div>
+                          </td>
+                        );
+                      })}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary transition-all"
+                              style={{ width: `${progreso}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-sm font-medium text-foreground w-12 text-right">
+                            {progreso}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Cuellos de Botella</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {Object.entries(cuellosDeBotella)
+                .sort(([, a], [, b]) => (b as number) - (a as number))
+                .slice(0, 3)
+                .map(([key, count]) => {
+                  const taller = talleres.find((t) => t.key === key);
+                  return (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between p-3 bg-secondary rounded-lg"
+                    >
+                      <span className="font-medium">{taller?.label}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl font-semibold">{count as number}</span>
+                        <span className="text-sm text-muted-foreground">órdenes</span>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Eficiencia por Taller</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {talleres.map((taller) => {
+                const total = mockOrdenes.length;
+                const completados = mockOrdenes.filter(
+                  (o) => o.progreso[taller.key as keyof typeof o.progreso] === "completed"
+                ).length;
+                const porcentaje = Math.round((completados / total) * 100);
+
+                return (
+                  <div key={taller.key}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">{taller.label}</span>
+                      <span className="text-sm text-muted-foreground">{porcentaje}%</span>
+                    </div>
+                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary transition-all"
+                        style={{ width: `${porcentaje}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
