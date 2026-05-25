@@ -26,9 +26,18 @@ export default function Seguimiento() {
   const getCuellosDeBotella = () => {
     const talleresCarga: any = {};
     talleres.forEach((taller) => {
-      talleresCarga[taller.key] = mockOrdenes.filter(
-        (o) => o.progreso[taller.key as keyof typeof o.progreso] === "in-progress"
-      ).length;
+      let count = 0;
+      mockOrdenes.forEach((orden) => {
+        orden.productos.forEach((producto) => {
+          if (
+            producto.talleres.includes(taller.key as any) &&
+            producto.progreso[taller.key as keyof typeof producto.progreso] === "in-progress"
+          ) {
+            count++;
+          }
+        });
+      });
+      talleresCarga[taller.key] = count;
     });
     return talleresCarga;
   };
@@ -98,44 +107,59 @@ export default function Seguimiento() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {mockOrdenes.map((orden) => {
-                  const talleresList = Object.values(orden.progreso);
-                  const completados = talleresList.filter((t) => t === "completed").length;
-                  const progreso = Math.round((completados / talleresList.length) * 100);
+                {mockOrdenes.flatMap((orden) =>
+                  orden.productos.map((producto) => {
+                    const talleresList = Object.values(producto.progreso);
+                    const completados = talleresList.filter((t) => t === "completed").length;
+                    const progreso =
+                      talleresList.length > 0
+                        ? Math.round((completados / talleresList.length) * 100)
+                        : 100;
 
-                  return (
-                    <tr key={orden.id} className="hover:bg-secondary/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <p className="font-medium text-foreground">{orden.numero}</p>
-                        <p className="text-xs text-muted-foreground">{orden.producto}</p>
-                      </td>
-                      <td className="px-6 py-4 text-foreground">{orden.cliente}</td>
-                      {talleres.map((taller) => {
-                        const estado = orden.progreso[taller.key as keyof typeof orden.progreso];
-                        return (
-                          <td key={taller.key} className="px-6 py-4">
-                            <div className="flex justify-center">
-                              {getEstadoIcon(estado)}
+                    return (
+                      <tr
+                        key={`${orden.id}-${producto.id}`}
+                        className="hover:bg-secondary/50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
+                          <p className="font-medium text-foreground">{orden.numero}</p>
+                          <p className="text-xs text-muted-foreground">{producto.nombre}</p>
+                        </td>
+                        <td className="px-6 py-4 text-foreground">{orden.cliente}</td>
+                        {talleres.map((taller) => {
+                          const estado = producto.progreso[
+                            taller.key as keyof typeof producto.progreso
+                          ];
+                          const tallerActivo = producto.talleres.includes(taller.key as any);
+                          return (
+                            <td key={taller.key} className="px-6 py-4">
+                              <div className="flex justify-center">
+                                {tallerActivo ? (
+                                  getEstadoIcon(estado || "pending")
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </td>
+                          );
+                        })}
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${progreso}%` }}
+                              ></div>
                             </div>
-                          </td>
-                        );
-                      })}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden">
-                            <div
-                              className="h-full bg-primary transition-all"
-                              style={{ width: `${progreso}%` }}
-                            ></div>
+                            <span className="text-sm font-medium text-foreground w-12 text-right">
+                              {progreso}%
+                            </span>
                           </div>
-                          <span className="text-sm font-medium text-foreground w-12 text-right">
-                            {progreso}%
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -178,17 +202,30 @@ export default function Seguimiento() {
           <CardContent>
             <div className="space-y-4">
               {talleres.map((taller) => {
-                const total = mockOrdenes.length;
-                const completados = mockOrdenes.filter(
-                  (o) => o.progreso[taller.key as keyof typeof o.progreso] === "completed"
-                ).length;
-                const porcentaje = Math.round((completados / total) * 100);
+                let total = 0;
+                let completados = 0;
+                mockOrdenes.forEach((orden) => {
+                  orden.productos.forEach((producto) => {
+                    if (producto.talleres.includes(taller.key as any)) {
+                      total++;
+                      if (
+                        producto.progreso[taller.key as keyof typeof producto.progreso] ===
+                        "completed"
+                      ) {
+                        completados++;
+                      }
+                    }
+                  });
+                });
+                const porcentaje = total > 0 ? Math.round((completados / total) * 100) : 0;
 
                 return (
                   <div key={taller.key}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">{taller.label}</span>
-                      <span className="text-sm text-muted-foreground">{porcentaje}%</span>
+                      <span className="text-sm text-muted-foreground">
+                        {porcentaje}% ({completados}/{total})
+                      </span>
                     </div>
                     <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
                       <div

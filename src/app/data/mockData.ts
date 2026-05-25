@@ -23,6 +23,9 @@ export interface Producto {
 
 export type TallerEstado = "pending" | "in-progress" | "completed";
 export type Taller = "diseno" | "sublimacion" | "corte" | "costura" | "bordado";
+export type TipoVenta = "directa" | "fabricacion" | "comercializacion" | "mixta";
+export type MetodoPago = "efectivo" | "transferencia" | "tarjeta";
+export type EstadoPago = "pendiente" | "anticipo" | "liquidado";
 
 export interface OrdenBordadoDetalle {
   lugarBordar: "bolsillo" | "personalizado" | "espalda";
@@ -31,25 +34,56 @@ export interface OrdenBordadoDetalle {
   notasAdicionales?: string;
 }
 
+export interface PersonalizacionProducto {
+  lugarBordado?: "bolsillo" | "espalda" | "frente" | "personalizado";
+  logotipo?: string;
+  coloresHilo?: string[];
+  notas?: string;
+}
+
+export interface ProductoOrden {
+  id: string;
+  nombre: string;
+  tipoPrenda: string;
+  marca?: string;
+  talla: string;
+  color: string;
+  cantidad: number;
+  precioUnitario: number;
+  tipoProduccion: "directa" | "fabricacion" | "comercializacion";
+  talleres: Taller[];
+  progreso: Partial<Record<Taller, TallerEstado>>;
+  proveedorId?: string;
+  proveedorNombre?: string;
+  personalizacion?: PersonalizacionProducto;
+  notas?: string;
+}
+
+export interface Pago {
+  fecha: string;
+  monto: number;
+  metodo: MetodoPago;
+  referencia?: string;
+}
+
 export interface Orden {
   id: string;
   numero: string;
   vendedor: string;
   vendedorId: string;
   cliente: string;
-  producto: string;
-  tipoPrenda: "camisa" | "pantalon" | "overol" | "chaleco" | "otro";
-  marca?: string;
-  talla: string;
-  color: string;
-  cantidad: number;
   fechaCreacion: string;
   fechaEntrega: string;
+  tipoVenta: TipoVenta;
+  productos: ProductoOrden[];
   estado: "pending" | "in-progress" | "completed";
-  talleres: Taller[];
-  progreso: Partial<Record<Taller, TallerEstado>>;
   prioridad: "alta" | "media" | "baja";
-  bordadoDetalle?: OrdenBordadoDetalle;
+  metodoPago: MetodoPago;
+  estadoPago: EstadoPago;
+  total: number;
+  anticipo: number;
+  pagos: Pago[];
+  notas?: string;
 }
 
 export interface Proveedor {
@@ -205,30 +239,50 @@ export const mockOrdenes: Orden[] = [
     vendedor: "Luis Hernández",
     vendedorId: "3",
     cliente: "Constructora ABC",
-    producto: "Overol Completo",
-    tipoPrenda: "overol",
-    marca: "Dickies",
-    talla: "L",
-    color: "Azul Rey",
-    cantidad: 50,
     fechaCreacion: "2026-04-10",
     fechaEntrega: "2026-04-20",
+    tipoVenta: "fabricacion",
+    productos: [
+      {
+        id: "p1",
+        nombre: "Overol Completo",
+        tipoPrenda: "overol",
+        marca: "Dickies",
+        talla: "L",
+        color: "Azul Rey",
+        cantidad: 50,
+        precioUnitario: 650,
+        tipoProduccion: "fabricacion",
+        talleres: ["diseno", "sublimacion", "corte", "costura", "bordado"],
+        progreso: {
+          diseno: "completed",
+          sublimacion: "completed",
+          corte: "in-progress",
+          costura: "pending",
+          bordado: "pending",
+        },
+        personalizacion: {
+          lugarBordado: "bolsillo",
+          logotipo: "logo-constructora.png",
+          coloresHilo: ["Azul Marino", "Blanco"],
+          notas: "Logo en pecho izquierdo y nombre en espalda",
+        },
+      },
+    ],
     estado: "in-progress",
-    talleres: ["diseno", "sublimacion", "corte", "costura", "bordado"],
-    progreso: {
-      diseno: "completed",
-      sublimacion: "completed",
-      corte: "in-progress",
-      costura: "pending",
-      bordado: "pending",
-    },
     prioridad: "alta",
-    bordadoDetalle: {
-      lugarBordar: "bolsillo",
-      logotipo: "logo-constructora.png",
-      coloresHilo: ["Azul Marino", "Blanco"],
-      notasAdicionales: "Logo en pecho izquierdo y nombre en espalda",
-    },
+    metodoPago: "transferencia",
+    estadoPago: "anticipo",
+    total: 32500,
+    anticipo: 16000,
+    pagos: [
+      {
+        fecha: "2026-04-10",
+        monto: 16000,
+        metodo: "transferencia",
+        referencia: "TRF-001234",
+      },
+    ],
   },
   {
     id: "2",
@@ -236,23 +290,59 @@ export const mockOrdenes: Orden[] = [
     vendedor: "Luis Hernández",
     vendedorId: "3",
     cliente: "Minera XYZ",
-    producto: "Camisa Industrial + Pantalón",
-    tipoPrenda: "camisa",
-    marca: "RedKap",
-    talla: "M",
-    color: "Gris Oxford",
-    cantidad: 100,
     fechaCreacion: "2026-04-11",
     fechaEntrega: "2026-04-25",
+    tipoVenta: "mixta",
+    productos: [
+      {
+        id: "p2a",
+        nombre: "Camisa Industrial",
+        tipoPrenda: "camisa",
+        marca: "RedKap",
+        talla: "M",
+        color: "Gris Oxford",
+        cantidad: 100,
+        precioUnitario: 380,
+        tipoProduccion: "fabricacion",
+        talleres: ["diseno", "sublimacion", "corte", "costura"],
+        progreso: {
+          diseno: "completed",
+          sublimacion: "in-progress",
+          corte: "pending",
+          costura: "pending",
+        },
+      },
+      {
+        id: "p2b",
+        nombre: "Pantalón Cargo",
+        tipoPrenda: "pantalon",
+        marca: "RedKap",
+        talla: "32",
+        color: "Gris Oxford",
+        cantidad: 100,
+        precioUnitario: 420,
+        tipoProduccion: "fabricacion",
+        talleres: ["corte", "costura"],
+        progreso: {
+          corte: "pending",
+          costura: "pending",
+        },
+      },
+    ],
     estado: "in-progress",
-    talleres: ["diseno", "sublimacion", "corte", "costura"],
-    progreso: {
-      diseno: "completed",
-      sublimacion: "in-progress",
-      corte: "pending",
-      costura: "pending",
-    },
     prioridad: "alta",
+    metodoPago: "transferencia",
+    estadoPago: "anticipo",
+    total: 80000,
+    anticipo: 40000,
+    pagos: [
+      {
+        fecha: "2026-04-11",
+        monto: 40000,
+        metodo: "transferencia",
+        referencia: "TRF-001235",
+      },
+    ],
   },
   {
     id: "3",
@@ -260,20 +350,36 @@ export const mockOrdenes: Orden[] = [
     vendedor: "Luis Hernández",
     vendedorId: "3",
     cliente: "Empresa Logística DEF",
-    producto: "Chaleco Reflectivo",
-    tipoPrenda: "chaleco",
-    talla: "Unitalla",
-    color: "Amarillo Neón",
-    cantidad: 200,
     fechaCreacion: "2026-04-12",
     fechaEntrega: "2026-04-18",
-    estado: "in-progress",
-    talleres: ["corte", "costura"],
-    progreso: {
-      corte: "completed",
-      costura: "in-progress",
-    },
+    tipoVenta: "directa",
+    productos: [
+      {
+        id: "p3",
+        nombre: "Chaleco Reflectivo",
+        tipoPrenda: "chaleco",
+        talla: "Unitalla",
+        color: "Amarillo Neón",
+        cantidad: 200,
+        precioUnitario: 180,
+        tipoProduccion: "directa",
+        talleres: [],
+        progreso: {},
+      },
+    ],
+    estado: "completed",
     prioridad: "alta",
+    metodoPago: "efectivo",
+    estadoPago: "liquidado",
+    total: 36000,
+    anticipo: 36000,
+    pagos: [
+      {
+        fecha: "2026-04-12",
+        monto: 36000,
+        metodo: "efectivo",
+      },
+    ],
   },
   {
     id: "4",
@@ -281,29 +387,42 @@ export const mockOrdenes: Orden[] = [
     vendedor: "Luis Hernández",
     vendedorId: "3",
     cliente: "Hotel Grand Plaza",
-    producto: "Camisa Ejecutiva",
-    tipoPrenda: "camisa",
-    marca: "Van Heusen",
-    talla: "XL",
-    color: "Blanco",
-    cantidad: 30,
     fechaCreacion: "2026-04-13",
     fechaEntrega: "2026-04-28",
+    tipoVenta: "fabricacion",
+    productos: [
+      {
+        id: "p4",
+        nombre: "Camisa Ejecutiva",
+        tipoPrenda: "camisa",
+        marca: "Van Heusen",
+        talla: "XL",
+        color: "Blanco",
+        cantidad: 30,
+        precioUnitario: 320,
+        tipoProduccion: "fabricacion",
+        talleres: ["diseno", "corte", "costura", "bordado"],
+        progreso: {
+          diseno: "in-progress",
+          corte: "pending",
+          costura: "pending",
+          bordado: "pending",
+        },
+        personalizacion: {
+          lugarBordado: "bolsillo",
+          logotipo: "logo-hotel.png",
+          coloresHilo: ["Dorado", "Negro"],
+          notas: "Nombre del hotel en cursiva",
+        },
+      },
+    ],
     estado: "pending",
-    talleres: ["diseno", "corte", "costura", "bordado"],
-    progreso: {
-      diseno: "in-progress",
-      corte: "pending",
-      costura: "pending",
-      bordado: "pending",
-    },
     prioridad: "media",
-    bordadoDetalle: {
-      lugarBordar: "bolsillo",
-      logotipo: "logo-hotel.png",
-      coloresHilo: ["Dorado", "Negro"],
-      notasAdicionales: "Nombre del hotel en cursiva",
-    },
+    metodoPago: "transferencia",
+    estadoPago: "pendiente",
+    total: 9600,
+    anticipo: 0,
+    pagos: [],
   },
   {
     id: "5",
@@ -311,28 +430,48 @@ export const mockOrdenes: Orden[] = [
     vendedor: "Luis Hernández",
     vendedorId: "3",
     cliente: "Fábrica GHI",
-    producto: "Pantalón Cargo",
-    tipoPrenda: "pantalon",
-    marca: "Carhartt",
-    talla: "32",
-    color: "Khaki",
-    cantidad: 75,
     fechaCreacion: "2026-04-09",
     fechaEntrega: "2026-04-22",
+    tipoVenta: "fabricacion",
+    productos: [
+      {
+        id: "p5",
+        nombre: "Pantalón Cargo",
+        tipoPrenda: "pantalon",
+        marca: "Carhartt",
+        talla: "32",
+        color: "Khaki",
+        cantidad: 75,
+        precioUnitario: 420,
+        tipoProduccion: "fabricacion",
+        talleres: ["corte", "costura", "bordado"],
+        progreso: {
+          corte: "completed",
+          costura: "completed",
+          bordado: "in-progress",
+        },
+        personalizacion: {
+          lugarBordado: "personalizado",
+          logotipo: "logo-fabrica.png",
+          coloresHilo: ["Verde", "Negro"],
+          notas: "Bordado lateral derecho",
+        },
+      },
+    ],
     estado: "in-progress",
-    talleres: ["corte", "costura", "bordado"],
-    progreso: {
-      corte: "completed",
-      costura: "completed",
-      bordado: "in-progress",
-    },
     prioridad: "media",
-    bordadoDetalle: {
-      lugarBordar: "personalizado",
-      logotipo: "logo-fabrica.png",
-      coloresHilo: ["Verde", "Negro"],
-      notasAdicionales: "Bordado lateral derecho",
-    },
+    metodoPago: "tarjeta",
+    estadoPago: "anticipo",
+    total: 31500,
+    anticipo: 15000,
+    pagos: [
+      {
+        fecha: "2026-04-09",
+        monto: 15000,
+        metodo: "tarjeta",
+        referencia: "CARD-8765",
+      },
+    ],
   },
 ];
 

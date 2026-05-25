@@ -2,29 +2,37 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/Card";
 import StatusBadge from "../components/StatusBadge";
 import WorkflowStepper from "../components/WorkflowStepper";
-import NuevaOrdenDialog from "../components/NuevaOrdenDialog";
+import NuevaOrdenMultiProducto from "../components/NuevaOrdenMultiProducto";
+import VentaRapidaDialog from "../components/VentaRapidaDialog";
 import { mockOrdenes, Orden } from "../data/mockData";
-import { Search, Plus, Calendar, User, Filter } from "lucide-react";
+import { Search, Plus, Calendar, User, Filter, Zap } from "lucide-react";
 import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 
 export default function Ordenes() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [ordenes, setOrdenes] = useState<Orden[]>(mockOrdenes);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterEstado, setFilterEstado] = useState<string>("all");
   const [filterVendedor, setFilterVendedor] = useState<string>("all");
   const [showNuevaOrden, setShowNuevaOrden] = useState(false);
+  const [showVentaRapida, setShowVentaRapida] = useState(false);
+
+  // Filtrar órdenes según el rol del usuario
+  const ordenesVisibles = user?.rol === "vendedor"
+    ? ordenes.filter((o) => o.vendedorId === user.id)
+    : ordenes;
 
   const vendedoresUnicos = Array.from(
-    new Set(ordenes.map((o) => o.vendedor))
+    new Set(ordenesVisibles.map((o) => o.vendedor))
   ).sort();
 
-  const filteredOrdenes = ordenes.filter((orden) => {
+  const filteredOrdenes = ordenesVisibles.filter((orden) => {
     const matchesSearch =
       orden.numero.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orden.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      orden.producto.toLowerCase().includes(searchTerm.toLowerCase()) ||
       orden.vendedor.toLowerCase().includes(searchTerm.toLowerCase());
 
     const matchesEstado = filterEstado === "all" || orden.estado === filterEstado;
@@ -34,11 +42,19 @@ export default function Ordenes() {
   });
 
   const getProgresoTotal = (orden: Orden) => {
-    const talleresActivos = orden.talleres;
-    const completados = talleresActivos.filter(
-      (t) => orden.progreso[t] === "completed"
-    ).length;
-    return Math.round((completados / talleresActivos.length) * 100);
+    if (!orden.productos || orden.productos.length === 0) return 100;
+
+    const todosLosTalleres = orden.productos.flatMap((p) => p.talleres);
+    if (todosLosTalleres.length === 0) return 100;
+
+    const talleresCompletados = orden.productos.reduce((acc, producto) => {
+      const completados = producto.talleres.filter(
+        (t) => producto.progreso[t] === "completed"
+      ).length;
+      return acc + completados;
+    }, 0);
+
+    return Math.round((talleresCompletados / todosLosTalleres.length) * 100);
   };
 
   const handleNuevaOrden = (nuevaOrden: Orden) => {
@@ -46,6 +62,36 @@ export default function Ordenes() {
     toast.success("Orden creada exitosamente", {
       description: `${nuevaOrden.numero} - ${nuevaOrden.cliente}`,
     });
+  };
+
+  const getTipoVentaColor = (tipo: string) => {
+    switch (tipo) {
+      case "directa":
+        return "bg-orange-500/10 text-orange-600 border-orange-500/20";
+      case "fabricacion":
+        return "bg-green-500/10 text-green-600 border-green-500/20";
+      case "comercializacion":
+        return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+      case "mixta":
+        return "bg-purple-500/10 text-purple-600 border-purple-500/20";
+      default:
+        return "bg-gray-500/10 text-gray-600 border-gray-500/20";
+    }
+  };
+
+  const getTipoVentaLabel = (tipo: string) => {
+    switch (tipo) {
+      case "directa":
+        return "Venta Directa";
+      case "fabricacion":
+        return "Fabricación";
+      case "comercializacion":
+        return "Comercialización";
+      case "mixta":
+        return "Mixta";
+      default:
+        return tipo;
+    }
   };
 
   return (
@@ -57,13 +103,22 @@ export default function Ordenes() {
             Gestión de órdenes activas y en proceso
           </p>
         </div>
-        <button
-          onClick={() => setShowNuevaOrden(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva Orden
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setShowVentaRapida(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors"
+          >
+            <Zap className="w-5 h-5" />
+            Venta Rápida
+          </button>
+          <button
+            onClick={() => setShowNuevaOrden(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+          >
+            <Plus className="w-5 h-5" />
+            Nueva Orden
+          </button>
+        </div>
       </div>
 
       <Card>
@@ -122,22 +177,19 @@ export default function Ordenes() {
                     Orden
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Vendedor
+                    Tipo Venta
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Cliente
+                    Vendedor / Cliente
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Tipo / Producto
+                    Productos
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Cantidad
+                    Total / Pago
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Entrega
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Flujo de Talleres
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Estado
@@ -151,6 +203,11 @@ export default function Ordenes() {
                     (new Date(orden.fechaEntrega).getTime() - new Date().getTime()) /
                       (1000 * 60 * 60 * 24)
                   );
+                  const cantidadTotal = orden.productos?.reduce(
+                    (acc, p) => acc + p.cantidad,
+                    0
+                  ) || 0;
+
                   return (
                     <tr
                       key={orden.id}
@@ -158,34 +215,76 @@ export default function Ordenes() {
                       className="hover:bg-secondary/50 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-4">
-                        <span className="font-medium text-foreground">
-                          {orden.numero}
-                        </span>
-                        {orden.prioridad === "alta" && (
-                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-status-pending-bg text-status-pending-text">
-                            Alta
+                        <div>
+                          <span className="font-medium text-foreground">
+                            {orden.numero}
                           </span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span className="text-foreground">{orden.vendedor}</span>
+                          {orden.prioridad === "alta" && (
+                            <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-status-pending-bg text-status-pending-text">
+                              Alta
+                            </span>
+                          )}
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(orden.fechaCreacion).toLocaleDateString()}
+                          </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-foreground">{orden.cliente}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getTipoVentaColor(
+                            orden.tipoVenta
+                          )}`}
+                        >
+                          {getTipoVentaLabel(orden.tipoVenta)}
+                        </span>
+                      </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="font-medium text-foreground capitalize">
-                            {orden.tipoPrenda}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {orden.producto}
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              {orden.vendedor}
+                            </span>
+                          </div>
+                          <p className="font-medium text-foreground mt-1">
+                            {orden.cliente}
                           </p>
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-foreground font-medium">
-                        {orden.cantidad} uds
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {orden.productos?.length || 0}{" "}
+                            {(orden.productos?.length || 0) === 1 ? "producto" : "productos"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {cantidadTotal} unidades
+                          </p>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div>
+                          <p className="font-semibold text-foreground">
+                            ${(orden.total || 0).toLocaleString()}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                orden.estadoPago === "liquidado"
+                                  ? "bg-status-completed text-status-completed-text"
+                                  : orden.estadoPago === "anticipo"
+                                  ? "bg-status-in-progress text-status-in-progress-text"
+                                  : "bg-status-pending-bg text-status-pending-text"
+                              }`}
+                            >
+                              {orden.estadoPago === "liquidado"
+                                ? "Pagado"
+                                : orden.estadoPago === "anticipo"
+                                ? `Anticipo: $${(orden.anticipo || 0).toLocaleString()}`
+                                : "Pendiente"}
+                            </span>
+                          </div>
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
@@ -203,25 +302,21 @@ export default function Ordenes() {
                             >
                               {diasRestantes > 0
                                 ? `${diasRestantes} días`
+                                : diasRestantes === 0
+                                ? "Hoy"
                                 : "Vencida"}
                             </p>
                           </div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
-                        <WorkflowStepper
-                          talleres={orden.talleres}
-                          progreso={orden.progreso}
-                          size="sm"
-                          showLabels={false}
-                        />
-                      </td>
-                      <td className="px-6 py-4">
                         <div className="flex flex-col gap-2">
                           <StatusBadge status={orden.estado} size="sm" />
-                          <span className="text-xs text-muted-foreground">
-                            {progreso}%
-                          </span>
+                          {orden.tipoVenta !== "directa" && (
+                            <span className="text-xs text-muted-foreground">
+                              {progreso}%
+                            </span>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -312,9 +407,15 @@ export default function Ordenes() {
         </Card>
       </div>
 
-      <NuevaOrdenDialog
+      <NuevaOrdenMultiProducto
         isOpen={showNuevaOrden}
         onClose={() => setShowNuevaOrden(false)}
+        onSubmit={handleNuevaOrden}
+      />
+
+      <VentaRapidaDialog
+        isOpen={showVentaRapida}
+        onClose={() => setShowVentaRapida(false)}
         onSubmit={handleNuevaOrden}
       />
     </div>

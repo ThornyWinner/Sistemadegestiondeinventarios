@@ -10,6 +10,9 @@ import {
   TrendingUp,
   Shirt,
   Info,
+  DollarSign,
+  ShoppingCart,
+  Users,
 } from "lucide-react";
 import { mockOrdenes, mockMateriales } from "../data/mockData";
 import { Link } from "react-router";
@@ -43,10 +46,50 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const ordenesEnProceso = mockOrdenes.filter((o) => o.estado === "in-progress").length;
-  const ordenesPendientes = mockOrdenes.filter((o) => o.estado === "pending").length;
-  const ordenesCompletadas = mockOrdenes.filter((o) => o.estado === "completed").length;
+  // Filtrar órdenes según el rol del usuario
+  const ordenesVisibles = user?.rol === "vendedor"
+    ? mockOrdenes.filter((o) => o.vendedorId === user.id)
+    : mockOrdenes;
+
+  const ordenesEnProceso = ordenesVisibles.filter((o) => o.estado === "in-progress").length;
+  const ordenesPendientes = ordenesVisibles.filter((o) => o.estado === "pending").length;
+  const ordenesCompletadas = ordenesVisibles.filter((o) => o.estado === "completed").length;
   const materialesBajoStock = mockMateriales.filter((m) => m.stock < m.stockMinimo).length;
+
+  // Nuevas métricas por tipo de venta
+  const ventasDirectas = ordenesVisibles.filter((o) => o.tipoVenta === "directa").length;
+  const ordenesEnFabricacion = ordenesVisibles.filter((o) => o.tipoVenta === "fabricacion").length;
+  const ordenesComercializadas = ordenesVisibles.filter((o) => o.tipoVenta === "comercializacion").length;
+  const ordenesMixtas = ordenesVisibles.filter((o) => o.tipoVenta === "mixta").length;
+
+  // Métricas financieras
+  const totalIngresos = ordenesVisibles.reduce((acc, o) => acc + (o.total || 0), 0);
+  const totalAnticipos = ordenesVisibles.reduce((acc, o) => acc + (o.anticipo || 0), 0);
+  const anticiposPendientes = ordenesVisibles
+    .filter((o) => o.estadoPago === "anticipo")
+    .reduce((acc, o) => acc + ((o.total || 0) - (o.anticipo || 0)), 0);
+
+  // Ventas por vendedor
+  const ventasPorVendedor = ordenesVisibles.reduce((acc, orden) => {
+    const vendedor = orden.vendedor;
+    if (!acc[vendedor]) {
+      acc[vendedor] = { nombre: vendedor, total: 0, ordenes: 0 };
+    }
+    acc[vendedor].total += (orden.total || 0);
+    acc[vendedor].ordenes += 1;
+    return acc;
+  }, {} as Record<string, { nombre: string; total: number; ordenes: number }>);
+
+  const topVendedores = Object.values(ventasPorVendedor)
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3);
+
+  const tiposVenta = [
+    { name: "Venta Directa", value: ventasDirectas, color: "#F97316" },
+    { name: "Fabricación", value: ordenesEnFabricacion, color: "#10B981" },
+    { name: "Comercialización", value: ordenesComercializadas, color: "#3B82F6" },
+    { name: "Mixta", value: ordenesMixtas, color: "#A855F7" },
+  ];
 
   const produccionPorTaller = [
     { taller: "Diseño", ordenes: 8, color: "#059669" },
@@ -85,6 +128,13 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
+          title="Ingresos Totales"
+          value={`$${(totalIngresos / 1000).toFixed(0)}k`}
+          icon={DollarSign}
+          color="success"
+          footer={`${ordenesVisibles.length} órdenes`}
+        />
+        <StatCard
           title="Órdenes Activas"
           value={ordenesEnProceso}
           icon={Clock}
@@ -92,18 +142,11 @@ export default function Dashboard() {
           footer="En proceso de producción"
         />
         <StatCard
-          title="Pendientes"
-          value={ordenesPendientes}
-          icon={AlertTriangle}
-          color="danger"
-          footer="Esperando iniciar"
-        />
-        <StatCard
-          title="Completadas (mes)"
-          value={12}
-          icon={CheckCircle2}
-          color="success"
-          trend={{ value: 15, isPositive: true }}
+          title="Anticipos Pendientes"
+          value={`$${(anticiposPendientes / 1000).toFixed(0)}k`}
+          icon={TrendingUp}
+          color="info"
+          footer={`De $${(totalAnticipos / 1000).toFixed(0)}k pagados`}
         />
         <StatCard
           title="Stock Bajo"
@@ -118,44 +161,73 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* Nuevas métricas de ventas */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-orange-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Venta Directa</p>
+                <p className="text-3xl font-bold mt-1">{ventasDirectas}</p>
+              </div>
+              <div className="p-3 bg-orange-500/10 rounded-lg">
+                <ShoppingCart className="w-6 h-6 text-orange-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-green-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Fabricación</p>
+                <p className="text-3xl font-bold mt-1">{ordenesEnFabricacion}</p>
+              </div>
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <Shirt className="w-6 h-6 text-green-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-blue-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Comercialización</p>
+                <p className="text-3xl font-bold mt-1">{ordenesComercializadas}</p>
+              </div>
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <Package className="w-6 h-6 text-blue-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Venta Mixta</p>
+                <p className="text-3xl font-bold mt-1">{ordenesMixtas}</p>
+              </div>
+              <div className="p-3 bg-purple-500/10 rounded-lg">
+                <TrendingUp className="w-6 h-6 text-purple-500" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Producción por Taller</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={produccionPorTaller}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                <XAxis dataKey="taller" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    border: "1px solid #E5E7EB",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Bar dataKey="ordenes" radius={[8, 8, 0, 0]}>
-                  {produccionPorTaller.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Estado de Órdenes</CardTitle>
+            <CardTitle>Órdenes por Tipo de Venta</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex items-center justify-between">
               <ResponsiveContainer width="60%" height={250}>
                 <PieChart>
                   <Pie
-                    data={estadoOrdenes}
+                    data={tiposVenta}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -163,15 +235,15 @@ export default function Dashboard() {
                     paddingAngle={5}
                     dataKey="value"
                   >
-                    {estadoOrdenes.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    {tiposVenta.map((entry, index) => (
+                      <Cell key={`tipo-venta-${entry.name}-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />
                 </PieChart>
               </ResponsiveContainer>
               <div className="space-y-3">
-                {estadoOrdenes.map((item) => (
+                {tiposVenta.map((item) => (
                   <div key={item.name} className="flex items-center gap-3">
                     <div
                       className="w-4 h-4 rounded"
@@ -184,6 +256,42 @@ export default function Dashboard() {
                   </div>
                 ))}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Users className="w-5 h-5 text-primary" />
+              Top Vendedores
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topVendedores.map((vendedor, index) => (
+                <div
+                  key={vendedor.nombre}
+                  className="flex items-center justify-between p-4 bg-secondary rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-center w-10 h-10 bg-primary text-primary-foreground rounded-full font-semibold">
+                      {index + 1}
+                    </div>
+                    <div>
+                      <p className="font-medium">{vendedor.nombre}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {vendedor.ordenes} órdenes
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-lg font-bold text-primary">
+                      ${vendedor.total.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -208,16 +316,16 @@ export default function Dashboard() {
                     Orden
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    Tipo
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Cliente
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Producto
+                    Productos
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Cantidad
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    Entrega
+                    Total
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     Estado
@@ -225,26 +333,65 @@ export default function Dashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {mockOrdenes.slice(0, 5).map((orden) => (
-                  <tr key={orden.id} className="hover:bg-secondary/50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="font-medium text-foreground">{orden.numero}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                      {orden.cliente}
-                    </td>
-                    <td className="px-6 py-4 text-foreground">{orden.producto}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                      {orden.cantidad} uds
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-foreground">
-                      {new Date(orden.fechaEntrega).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={orden.estado} size="sm" />
-                    </td>
-                  </tr>
-                ))}
+                {ordenesVisibles.slice(0, 5).map((orden) => {
+                  const cantidadTotal = orden.productos?.reduce(
+                    (acc, p) => acc + p.cantidad,
+                    0
+                  ) || 0;
+                  const getTipoColor = (tipo: string) => {
+                    switch (tipo) {
+                      case "directa":
+                        return "bg-orange-500/10 text-orange-600";
+                      case "fabricacion":
+                        return "bg-green-500/10 text-green-600";
+                      case "comercializacion":
+                        return "bg-blue-500/10 text-blue-600";
+                      case "mixta":
+                        return "bg-purple-500/10 text-purple-600";
+                      default:
+                        return "bg-gray-500/10 text-gray-600";
+                    }
+                  };
+                  return (
+                    <tr key={orden.id} className="hover:bg-secondary/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Link
+                          to={`/ordenes/${orden.id}`}
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {orden.numero}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${getTipoColor(
+                            orden.tipoVenta
+                          )}`}
+                        >
+                          {orden.tipoVenta === "directa"
+                            ? "Directa"
+                            : orden.tipoVenta === "fabricacion"
+                            ? "Fabricación"
+                            : orden.tipoVenta === "comercializacion"
+                            ? "Comercial."
+                            : "Mixta"}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-foreground">
+                        {orden.cliente}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-foreground">
+                        {orden.productos?.length || 0} prod. • {cantidadTotal} uds
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap font-semibold text-foreground">
+                        ${(orden.total || 0).toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={orden.estado} size="sm" />
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -289,45 +436,61 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Producción Hoy</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-primary" />
+              Estado Financiero
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Shirt className="w-5 h-5 text-primary" />
+                  <div className="p-2 bg-green-500/10 rounded-lg">
+                    <CheckCircle2 className="w-5 h-5 text-green-500" />
                   </div>
                   <div>
-                    <p className="font-medium">Prendas Completadas</p>
-                    <p className="text-sm text-muted-foreground">Hoy</p>
+                    <p className="font-medium">Ingresos Totales</p>
+                    <p className="text-sm text-muted-foreground">
+                      {ordenesVisibles.length} órdenes
+                    </p>
                   </div>
                 </div>
-                <p className="text-2xl font-semibold">127</p>
+                <p className="text-2xl font-semibold text-green-600">
+                  ${totalIngresos.toLocaleString()}
+                </p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-status-in-progress-bg rounded-lg">
-                    <Clock className="w-5 h-5 text-status-in-progress" />
+                  <div className="p-2 bg-blue-500/10 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-blue-500" />
                   </div>
                   <div>
-                    <p className="font-medium">En Proceso</p>
-                    <p className="text-sm text-muted-foreground">Hoy</p>
+                    <p className="font-medium">Anticipos Recibidos</p>
+                    <p className="text-sm text-muted-foreground">
+                      {ordenesVisibles.filter((o) => o.anticipo > 0).length} órdenes
+                    </p>
                   </div>
                 </div>
-                <p className="text-2xl font-semibold">48</p>
+                <p className="text-2xl font-semibold text-blue-600">
+                  ${totalAnticipos.toLocaleString()}
+                </p>
               </div>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-status-completed-bg rounded-lg">
-                    <TrendingUp className="w-5 h-5 text-status-completed" />
+                  <div className="p-2 bg-orange-500/10 rounded-lg">
+                    <Clock className="w-5 h-5 text-orange-500" />
                   </div>
                   <div>
-                    <p className="font-medium">Eficiencia</p>
-                    <p className="text-sm text-muted-foreground">vs. ayer</p>
+                    <p className="font-medium">Por Cobrar</p>
+                    <p className="text-sm text-muted-foreground">
+                      {ordenesVisibles.filter((o) => o.estadoPago === "anticipo").length}{" "}
+                      pendientes
+                    </p>
                   </div>
                 </div>
-                <p className="text-2xl font-semibold text-status-completed">+12%</p>
+                <p className="text-2xl font-semibold text-orange-600">
+                  ${anticiposPendientes.toLocaleString()}
+                </p>
               </div>
             </div>
           </CardContent>

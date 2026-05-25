@@ -203,7 +203,7 @@ export default function Reportes() {
                     label={(entry) => entry.cantidad}
                   >
                     {productosMasVendidos.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
+                      <Cell key={`producto-vendido-${entry.nombre}-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
                   <Tooltip />

@@ -10,43 +10,61 @@ export default function TallerDiseno() {
 
   const isReadOnly = user?.rol === 'admin_secundario';
 
-  const ordenesTaller = ordenesLocal.map((orden) => ({
-    id: orden.id,
-    numero: orden.numero,
-    cliente: orden.cliente,
-    producto: orden.producto,
-    cantidad: orden.cantidad,
-    fechaEntrega: orden.fechaEntrega,
-    estado: orden.progreso.diseno,
-    detalles: (
-      <div className="space-y-2">
-        <p className="text-xs text-muted-foreground">Estado del diseño:</p>
-        {isReadOnly ? (
-          <div className="flex items-center gap-2 px-2 py-1.5 bg-neutral-100 rounded text-xs text-neutral-600">
-            <Lock className="w-3 h-3" />
-            <span>Solo lectura</span>
-          </div>
-        ) : (
-          <div className="flex gap-2">
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-status-completed-bg text-status-completed-text rounded text-xs hover:bg-status-completed-bg/80 transition-colors">
-              <CheckCircle2 className="w-3 h-3" />
-              Aprobar
-            </button>
-            <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-status-pending-bg text-status-pending-text rounded text-xs hover:bg-status-pending-bg/80 transition-colors">
-              <XCircle className="w-3 h-3" />
-              Rechazar
-            </button>
-          </div>
-        )}
-      </div>
-    ),
-  }));
+  const ordenesTaller = ordenesLocal
+    .flatMap((orden) =>
+      orden.productos
+        .filter((producto) => producto.talleres.includes("diseno"))
+        .map((producto) => ({
+          id: `${orden.id}-${producto.id}`,
+          numero: `${orden.numero} - ${producto.nombre}`,
+          cliente: orden.cliente,
+          producto: producto.nombre,
+          cantidad: producto.cantidad,
+          fechaEntrega: orden.fechaEntrega,
+          estado: producto.progreso.diseno || "pending",
+          detalles: (
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">Estado del diseño:</p>
+              {isReadOnly ? (
+                <div className="flex items-center gap-2 px-2 py-1.5 bg-neutral-100 rounded text-xs text-neutral-600">
+                  <Lock className="w-3 h-3" />
+                  <span>Solo lectura</span>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-status-completed-bg text-status-completed-text rounded text-xs hover:bg-status-completed-bg/80 transition-colors">
+                    <CheckCircle2 className="w-3 h-3" />
+                    Aprobar
+                  </button>
+                  <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-status-pending-bg text-status-pending-text rounded text-xs hover:bg-status-pending-bg/80 transition-colors">
+                    <XCircle className="w-3 h-3" />
+                    Rechazar
+                  </button>
+                </div>
+              )}
+            </div>
+          ),
+          ordenId: orden.id,
+          productoId: producto.id,
+        }))
+    );
 
-  const handleChangeEstado = (ordenId: string, nuevoEstado: any) => {
+  const handleChangeEstado = (itemId: string, nuevoEstado: any) => {
+    const [ordenId, productoId] = itemId.split("-");
     setOrdenesLocal((prev) =>
       prev.map((orden) =>
         orden.id === ordenId
-          ? { ...orden, progreso: { ...orden.progreso, diseno: nuevoEstado } }
+          ? {
+              ...orden,
+              productos: orden.productos.map((producto) =>
+                producto.id === productoId
+                  ? {
+                      ...producto,
+                      progreso: { ...producto.progreso, diseno: nuevoEstado },
+                    }
+                  : producto
+              ),
+            }
           : orden
       )
     );
