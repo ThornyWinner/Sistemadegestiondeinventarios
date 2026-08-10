@@ -44,7 +44,7 @@ Contraseña: admin123
 **Para ver restricciones de solo lectura:**
 ```
 Usuario: admin2
-Contraseña: admin123
+Contraseña: admin456
 ```
 
 **Para ver acceso limitado a talleres:**
@@ -139,7 +139,7 @@ No puede acceder a otros talleres → Logout
 
 ### Caso 2: Solo Lectura (Admin Secundario)
 
-1. Login como `admin2 / admin123`
+1. Login como `admin2 / admin456`
 2. Observar banner amarillo en páginas
 3. Intentar crear/editar algo
 4. Ver tooltips explicando restricciones

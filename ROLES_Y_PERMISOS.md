@@ -40,7 +40,7 @@ Este sistema de gestión de inventarios y producción para uniformes industriale
 
 **Credenciales de prueba:**
 - Usuario: `admin2`
-- Contraseña: `admin123`
+- Contraseña: `admin456`
 
 **Indicadores visuales:**
 - Botones deshabilitados en todas las pantallas

@@ -236,7 +236,7 @@ export const mockOrdenes: Orden[] = [
   {
     id: "1",
     numero: "ORD-2026-001",
-    vendedor: "Luis Hernández",
+    vendedor: "Karla Flores",
     vendedorId: "3",
     cliente: "Constructora ABC",
     fechaCreacion: "2026-04-10",
@@ -287,7 +287,7 @@ export const mockOrdenes: Orden[] = [
   {
     id: "2",
     numero: "ORD-2026-002",
-    vendedor: "Luis Hernández",
+    vendedor: "Fernanda Vanegas",
     vendedorId: "3",
     cliente: "Minera XYZ",
     fechaCreacion: "2026-04-11",
@@ -347,7 +347,7 @@ export const mockOrdenes: Orden[] = [
   {
     id: "3",
     numero: "ORD-2026-003",
-    vendedor: "Luis Hernández",
+    vendedor: "Miguel Salas",
     vendedorId: "3",
     cliente: "Empresa Logística DEF",
     fechaCreacion: "2026-04-12",
@@ -384,7 +384,7 @@ export const mockOrdenes: Orden[] = [
   {
     id: "4",
     numero: "ORD-2026-004",
-    vendedor: "Luis Hernández",
+    vendedor: "Miguel Salas",
     vendedorId: "3",
     cliente: "Hotel Grand Plaza",
     fechaCreacion: "2026-04-13",
@@ -427,7 +427,7 @@ export const mockOrdenes: Orden[] = [
   {
     id: "5",
     numero: "ORD-2026-005",
-    vendedor: "Luis Hernández",
+    vendedor: "Miguel Salas",
     vendedorId: "3",
     cliente: "Fábrica GHI",
     fechaCreacion: "2026-04-09",

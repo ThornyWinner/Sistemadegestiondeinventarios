@@ -19,7 +19,7 @@ export default function DemoCredenciales() {
     {
       rol: 'admin_secundario' as UserRole,
       usuario: 'admin2',
-      password: 'admin123',
+      password: 'admin456',
       descripcion: 'Solo lectura en todo',
       color: 'bg-yellow-500',
     },

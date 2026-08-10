@@ -113,7 +113,7 @@ export default function Login() {
                 </div>
                 <div className="bg-neutral-50 p-2 rounded">
                   <p className="font-medium text-neutral-700">Admin Secundario</p>
-                  <p className="text-neutral-500">admin2 / admin123</p>
+                  <p className="text-neutral-500">admin2 / admin456</p>
                 </div>
                 <div className="bg-neutral-50 p-2 rounded">
                   <p className="font-medium text-neutral-700">Vendedor</p>

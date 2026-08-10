@@ -105,7 +105,7 @@ Contraseña: admin123
 
 Admin Secundario:
 Usuario: admin2
-Contraseña: admin123
+Contraseña: admin456
 
 Vendedor:
 Usuario: vendedor1
