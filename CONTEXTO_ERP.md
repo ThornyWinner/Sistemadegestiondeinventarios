@@ -1,6 +1,6 @@
-# Contexto del ERP — Uniformes Industriales
+# Contexto Maestro del ERP — Uniformes Industriales
 
-**Versión de contexto:** 1.0  
+**Versión:** 1.1  
 **Fecha:** 10 de agosto de 2026  
 **Propósito:** documento de transferencia de contexto para desarrolladores humanos y asistentes de IA que continúen el proyecto.
 
@@ -8,51 +8,54 @@
 
 ## 1. Qué es este proyecto
 
-Este repositorio contiene el frontend de un sistema de gestión empresarial (ERP) especializado en una empresa dedicada a la fabricación y comercialización de uniformes industriales.
+Este repositorio contiene el frontend de un ERP especializado para una empresa dedicada a la fabricación y comercialización de uniformes industriales.
 
-El sistema no debe entenderse como un inventario genérico. Su objetivo es centralizar y dar trazabilidad a la operación comercial, inventario, producción, talleres, pagos, seguimiento de órdenes y auditoría.
+El sistema **no es un inventario genérico**. Su objetivo es centralizar y dar trazabilidad a la operación comercial, inventario, producción, talleres, pagos, seguimiento de órdenes, documentos y auditoría.
 
-La finalidad operativa es reducir la dependencia de comunicación informal (por ejemplo, mensajes dispersos por WhatsApp) y convertir la información de una orden en un flujo estructurado y auditable.
+La finalidad operativa es reducir la dependencia de comunicación informal —por ejemplo, mensajes dispersos por WhatsApp— y convertir la información de una orden en un flujo estructurado y auditable.
 
 ---
 
 ## 2. Estado actual del repositorio
 
-El frontend está construido con React + TypeScript + Vite y actualmente contiene una implementación/prototipo funcional basada en datos de demostración (`mockData.ts` y `mockUsers.ts`).
+El frontend está construido con React + TypeScript + Vite y contiene una implementación/prototipo funcional basada en datos de demostración (`mockData.ts` y `mockUsers.ts`).
 
-La documentación del repositorio también contiene un esquema de PostgreSQL/Supabase, tablas, constraints, índices, triggers y políticas. Esa documentación representa la arquitectura de datos que debe utilizarse como referencia para integrar el frontend con la base de datos real.
+La documentación del repositorio también contiene un esquema de PostgreSQL/Supabase, tablas, constraints, índices, triggers y políticas.
 
-**Importante:** el código frontend actual y la base de datos documentada no deben considerarse automáticamente equivalentes. Antes de implementar una funcionalidad, hay que determinar si ya existe en frontend, si existe en base de datos o si está pendiente de integración.
+**Importante:** el frontend actual y la base de datos documentada **no deben considerarse automáticamente equivalentes**. Antes de implementar una funcionalidad hay que determinar si ya existe en frontend, si existe en la base de datos, si está integrada o si está pendiente.
+
+La integración completa frontend ↔ Supabase debe considerarse pendiente de validación hasta que el código demuestre explícitamente esa conexión.
 
 ---
 
 ## 3. Regla fundamental para continuar el proyecto
 
-Este NO es un proyecto nuevo.
+**Este NO es un proyecto nuevo.**
 
 Cualquier desarrollador o IA que trabaje en él debe:
 
 1. Analizar primero el código existente.
 2. Analizar la documentación de la base de datos.
 3. Identificar qué es funcional, qué es mock y qué está incompleto.
-4. Respetar las relaciones y restricciones existentes.
+4. Respetar relaciones, constraints, índices, triggers y políticas existentes.
 5. Evitar recrear tablas, roles, triggers o funcionalidades que ya existan.
-6. No reemplazar la arquitectura actual por otra tecnología sin una decisión explícita del propietario del proyecto.
+6. No reemplazar la arquitectura actual por otra tecnología sin una decisión explícita del propietario.
 7. No eliminar funcionalidades existentes para resolver un problema nuevo.
 8. Antes de modificar la base de datos, revisar dependencias, RLS, triggers, constraints e índices.
 9. Preferir cambios incrementales y verificables.
+10. Si existe una contradicción entre documentación, código y reglas de negocio, señalarla antes de inventar una solución.
 
 ---
 
 ## 4. Modelo de negocio
 
-La empresa trabaja principalmente con dos tipos de operación:
+La empresa trabaja principalmente con tres tipos de operación.
 
 ### 4.1 Comercialización
 
 Compra de productos terminados a proveedores para posteriormente venderlos al cliente.
 
-Ejemplo conceptual:
+Flujo conceptual:
 
 `Proveedor → Producto terminado → Inventario → Orden de venta → Cliente`
 
@@ -60,7 +63,7 @@ Ejemplo conceptual:
 
 Producción de prendas desde materiales y/o componentes, pasando por los talleres que correspondan.
 
-Ejemplo conceptual:
+Flujo conceptual posible:
 
 `Materiales → Diseño → Sublimación → Corte → Costura → Bordado → Producto terminado`
 
@@ -68,7 +71,9 @@ Ejemplo conceptual:
 
 ### 4.3 Venta directa
 
-También existe venta de productos que ya se encuentran disponibles en inventario y pueden entregarse inmediatamente.
+Venta de productos que ya se encuentran disponibles en inventario y pueden entregarse inmediatamente.
+
+Estas operaciones no deben confundirse con una orden de fabricación.
 
 ---
 
@@ -76,14 +81,14 @@ También existe venta de productos que ya se encuentran disponibles en inventari
 
 El sistema contempla principalmente:
 
-- Administrador primario: control total.
-- Administrador secundario: consulta/lectura según las reglas establecidas.
-- Vendedor: clientes, órdenes y funciones comerciales autorizadas.
-- Diseñador: actividades relacionadas con diseño.
-- Sublimador: actividades relacionadas con sublimación.
-- Cortador: actividades relacionadas con corte.
-- Costurera: actividades relacionadas con costura.
-- Bordador: actividades relacionadas con bordado.
+- **Administrador primario:** control total.
+- **Administrador secundario:** consulta/lectura según las reglas establecidas.
+- **Vendedor:** clientes, órdenes y funciones comerciales autorizadas.
+- **Diseñador:** actividades relacionadas con diseño.
+- **Sublimador:** actividades relacionadas con sublimación.
+- **Cortador:** actividades relacionadas con corte.
+- **Costurera:** actividades relacionadas con costura.
+- **Bordador:** actividades relacionadas con bordado.
 
 Los permisos deben respetarse tanto en la interfaz como, cuando se integre la base de datos, mediante controles reales del backend/RLS. Los controles visuales del frontend nunca deben considerarse una frontera de seguridad suficiente.
 
@@ -97,33 +102,41 @@ Cada detalle puede representar una prenda/producto y una cantidad determinada. D
 
 Una orden puede tener:
 
-- Folio.
-- Cliente.
-- Vendedor.
-- Prioridad.
-- Fechas.
-- Productos/detalles.
-- Cantidades.
-- Precio unitario.
-- Subtotal.
-- Descuento.
-- Total.
-- Anticipo.
-- Estado de pago.
-- Método de pago.
-- Tipo de venta.
-- Notas.
-- Archivos.
-- Comentarios.
-- Historial de cambios.
+- folio
+- cliente
+- vendedor
+- prioridad
+- fechas
+- productos/detalles
+- cantidades
+- precio unitario
+- subtotal
+- descuento
+- total
+- anticipo
+- estado de pago
+- método de pago
+- tipo de venta
+- notas
+- archivos
+- comentarios
+- historial de cambios
 
-Las modificaciones posteriores a una orden son relevantes para la operación. Cuando una orden cambie, el sistema debe mantener trazabilidad y, cuando corresponda, notificar a los usuarios afectados.
+### Cambios posteriores
+
+Los clientes pueden solicitar cambios después de creada una orden. Cuando una orden cambie:
+
+- no debe tratarse como si la orden original nunca hubiera existido
+- debe conservarse trazabilidad
+- debe identificarse quién realizó el cambio
+- debe registrarse qué cambió cuando el modelo lo permita
+- los usuarios afectados deben recibir notificación cuando corresponda
 
 ---
 
 ## 7. Producción y talleres
 
-Los talleres actualmente considerados son:
+Los talleres considerados son:
 
 - Diseño
 - Sublimación
@@ -131,15 +144,29 @@ Los talleres actualmente considerados son:
 - Costura
 - Bordado
 
-El sistema debe soportar flujos variables. No debe asumir que una orden siempre atraviesa los cinco talleres.
+El sistema debe soportar flujos variables. **No debe asumir que una orden siempre atraviesa los cinco talleres.**
 
 La tabla `produccion_taller` representa la relación entre un detalle de orden, un taller y el usuario responsable, además del estado y fechas de inicio/fin.
+
+Ejemplos válidos:
+
+```text
+Diseño → Corte → Costura
+```
+
+```text
+Diseño → Sublimación → Corte → Costura → Bordado
+```
+
+```text
+Corte → Costura → Bordado
+```
 
 ---
 
 ## 8. Inventario
 
-Existen dos conceptos principales:
+Existen dos dominios principales.
 
 ### Materiales
 
@@ -153,11 +180,13 @@ Son prendas/productos terminados. Pueden tener variantes por talla/color y SKU.
 
 Los movimientos deben dejar trazabilidad del stock anterior, cantidad, stock nuevo, usuario y referencia/motivo cuando aplique.
 
+No modificar directamente stock sin considerar el historial de movimientos y las reglas de concurrencia/transacción.
+
 ---
 
 ## 9. Base de datos
 
-La documentación de base de datos se encuentra actualmente en archivos separados:
+La documentación se encuentra en:
 
 - `Esquema Base de Datos.txt`
 - `Tablas.txt`
@@ -189,7 +218,7 @@ El esquema documentado incluye entidades relacionadas con:
 - comentarios de órdenes
 - consecutivos de documentos
 
-El archivo de esquema es una representación de referencia y contiene una advertencia de que no debe ejecutarse directamente como migración sin validar orden, dependencias y constraints.
+El archivo de esquema contiene una advertencia de que **no debe ejecutarse directamente como migración** sin validar orden, dependencias y constraints.
 
 ---
 
@@ -197,7 +226,7 @@ El archivo de esquema es una representación de referencia y contiene una advert
 
 La arquitectura de datos está orientada a PostgreSQL/Supabase.
 
-La integración del frontend con Supabase debe tratarse como una tarea de integración pendiente cuando el código existente no la contenga. No se debe asumir que `mockData.ts` representa la base de datos real.
+Cuando el código frontend no contenga integración real, no debe inventarse una conexión ni afirmarse que ya existe.
 
 Las políticas RLS, triggers y funciones existentes deben revisarse antes de modificar tablas relacionadas.
 
@@ -227,7 +256,7 @@ No deben utilizarse como fuente de verdad para diseñar nuevas relaciones de bas
 
 La operación contempla una futura/pendiente integración del flujo de facturación con CONTPAQi.
 
-Los vendedores han solicitado que una orden pueda recopilar, cuando corresponda, información fiscal como:
+Los vendedores han solicitado que una orden pueda recopilar, cuando corresponda:
 
 - RFC
 - razón social
@@ -236,11 +265,42 @@ Los vendedores han solicitado que una orden pueda recopilar, cuando corresponda,
 - uso de CFDI
 - correo electrónico
 
-No debe asumirse que una integración directa con CONTPAQi ya está implementada en este repositorio si no existe código/documentación específica que lo demuestre.
+No debe asumirse que una integración directa con CONTPAQi ya está implementada si no existe código/documentación específica que lo demuestre.
 
 ---
 
-## 13. Principios de desarrollo
+## 13. Auditoría y trazabilidad
+
+La trazabilidad es una característica central del ERP.
+
+El sistema debe poder responder preguntas como:
+
+- ¿quién creó la orden?
+- ¿quién la modificó?
+- ¿qué estado tenía antes?
+- ¿qué estado tiene ahora?
+- ¿cuándo ocurrió el cambio?
+- ¿quién registró el pago?
+- ¿quién movió inventario?
+- ¿qué usuario trabajó una etapa de producción?
+
+Las tablas y triggers documentados forman parte de esta arquitectura.
+
+No eliminar un trigger de auditoría por parecer duplicado sin comprobar previamente qué eventos cubre.
+
+---
+
+## 14. Archivos y evidencias
+
+Las órdenes pueden tener archivos asociados, por ejemplo diseños, documentos o evidencias.
+
+Los archivos reales no deben almacenarse dentro del repositorio Git.
+
+La aplicación debe utilizar almacenamiento apropiado, con permisos y URLs seguras.
+
+---
+
+## 15. Principios de desarrollo
 
 ### No romper lo existente
 
@@ -248,11 +308,11 @@ Antes de cambiar un componente, ruta, tabla o función, localizar sus referencia
 
 ### No duplicar conceptos
 
-Antes de crear una tabla/estado/rol/trigger, buscar si ya existe una entidad equivalente.
+Antes de crear una tabla, estado, rol o trigger, buscar si ya existe una entidad equivalente.
 
 ### Base de datos primero para datos persistentes
 
-Los datos persistentes deben provenir de la base de datos real una vez integrada. El frontend no debe convertirse en una segunda base de datos mediante mocks permanentes.
+Una vez integrada la base real, los datos persistentes deben provenir de ella. El frontend no debe convertirse en una segunda base de datos mediante mocks permanentes.
 
 ### Auditoría
 
@@ -260,11 +320,11 @@ Las operaciones críticas deben conservar trazabilidad: quién hizo el cambio, q
 
 ### Cambios pequeños
 
-Implementar por fases. Después de cada cambio importante, comprobar compilación, navegación, permisos y comportamiento afectado.
+Implementar por fases. Después de cada cambio importante comprobar compilación, navegación, permisos y comportamiento afectado.
 
 ---
 
-## 14. Qué NO debe hacer una IA sin autorización
+## 16. Qué NO debe hacer una IA sin autorización
 
 - Cambiar React/Vite por otro framework.
 - Cambiar Supabase/PostgreSQL por otra base de datos.
@@ -277,10 +337,11 @@ Implementar por fases. Después de cada cambio importante, comprobar compilació
 - Ejecutar el esquema documentado completo como si fuera una migración segura.
 - Eliminar triggers porque parezcan duplicados sin comprobar su propósito.
 - Modificar permisos para que una pantalla funcione sin analizar la seguridad real.
+- Realizar cambios destructivos en producción sin confirmación.
 
 ---
 
-## 15. Primera tarea recomendada para cualquier nuevo agente de desarrollo
+## 17. Primera tarea recomendada para cualquier nuevo agente de desarrollo
 
 Antes de escribir código nuevo, generar un diagnóstico que clasifique cada módulo como:
 
@@ -295,3 +356,17 @@ Antes de escribir código nuevo, generar un diagnóstico que clasifique cada mó
 El objetivo es construir una matriz de correspondencia entre frontend, base de datos y reglas de negocio.
 
 Solo después de esa matriz debe comenzar la implementación de nuevas funcionalidades.
+
+---
+
+## 18. Fuente de verdad
+
+Cuando existan diferencias, utilizar esta prioridad:
+
+1. Reglas de negocio confirmadas por el propietario.
+2. Base de datos real y seguridad real.
+3. Documentación del ERP.
+4. Código existente.
+5. Datos mock.
+
+Si una fuente contradice otra, **no inventar una resolución**. Informar la contradicción y pedir una decisión cuando afecte arquitectura o negocio.
